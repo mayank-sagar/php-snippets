@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Php snippet's</title>
+    <style>
+      body {
+        padding: 0px;
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="editor"></canvas>
+    <script>
+      let cursorXPosition = 10;
+      let cursorYPosition = 50;
+      let textEditorWidth = window.innerWidth;
+      let textEditorHeight = window.innerHeight;
+      let characterWidth = 30;
+      let lastTextWidth = 0;
+      let editorText = "";
+      let editorXPosition = 0;
+      let editorYPosition = 0;
+      let paginationStack = [];
+      let paginationXStack = [];
+
+      console.log(window, textEditorWidth, textEditorHeight);
+      const canvas = document.querySelector("#editor");
+      canvas.width = textEditorWidth;
+      canvas.height = textEditorHeight;
+      let context = canvas.getContext("2d");
+
+      context.fillStyle = "rgb(47, 54, 64)";
+      context.font = "50px Arial";
+      context.fillRect(0, 0, textEditorWidth, textEditorHeight);
+
+      document.addEventListener("DOMContentLoaded", () => {
+        drawCursor();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        console.log(e.keyCode, e.key);
+        const { keyCode } = e;
+
+        if (
+          areKeysFromAToZ(keyCode) ||
+          isSpace(keyCode) ||
+          areNumbers(keyCode) ||
+          areSpecialCharacters(keyCode)
+        ) {
+          type(e.key);
+        }
+
+        // Backspace
+        if (e.keyCode === 8) {
+          clearLastCharacter();
+        }
+
+        // Enter
+        if (e.keyCode == 13) {
+          gotoNextLine();
+        }
+      });
+
+      function redrawEditor() {
+        // it will not cover the entire screen it will only cover half of it
+        const currentCanvas = context.getImageData(
+          0,
+          60,
+          textEditorWidth,
+          textEditorHeight - 60,
+        );
+        clearReact(0, 0);
+        context.putImageData(currentCanvas, 0, 0);
+      }
+
+      function redrawScrollToTop(prevImage) {
+        const currentCanvas = context.getImageData(
+          0,
+          0,
+          textEditorWidth,
+          textEditorHeight,
+        );
+        clearReact(0, 0);
+        context.putImageData(prevImage, 0, 0);
+        context.putImageData(currentCanvas, 0, 60);
+      }
+
+      function scrollToTop() {
+        if (cursorYPosition > textEditorHeight) {
+          const currentCanvas = context.getImageData(0, 0, textEditorWidth, 60);
+          paginationStack.push(currentCanvas);
+          cursorYPosition -= 60;
+          redrawEditor();
+        }
+      }
+
+      function scrollToBottom() {
+        // if it near top and page stack is not empty
+        if (cursorYPosition <= 100 && paginationStack.length) {
+          cursorYPosition += 60;
+          const currentCanvas = paginationStack.pop();
+          redrawScrollToTop(currentCanvas);
+        }
+      }
+
+      function scrollToRight() {
+        if (cursorXPosition > textEditorWidth) {
+          const currentCanvas = context.getImageData(
+            0,
+            0,
+            60,
+            textEditorHeight,
+          );
+          cursorXPosition -= 60;
+          paginationXStack.push(currentCanvas);
+          redrawEditorX();
+        }
+      }
+
+      function scrollToLeft() {
+        // if it near top and page stack is not empty
+        if (cursorXPosition <= 100 && paginationXStack.length) {
+          cursorXPosition += 60;
+          const currentCanvas = paginationXStack.pop();
+          redrawEditorXToRight(currentCanvas);
+        }
+      }
+
+      function redrawEditorX() {
+        // it will not cover the entire screen it will only cover half of it
+        const currentCanvas = context.getImageData(
+          60,
+          0,
+          textEditorWidth - 60,
+          textEditorHeight,
+        );
+        clearReact(0, 0);
+        context.putImageData(currentCanvas, 0, 0);
+      }
+
+      function redrawEditorXToRight(prevImage) {
+        const currentCanvas = context.getImageData(
+          0,
+          0,
+          textEditorWidth,
+          textEditorHeight,
+        );
+        clearReact(0, 0);
+        context.putImageData(prevImage, 0, 0);
+        context.putImageData(currentCanvas, 60, 0);
+      }
+
+      function areSpecialCharacters() {
+        return false;
+      }
+
+      function areNumbers(keyCode) {
+        return keyCode >= 48 && keyCode <= 57;
+      }
+      function areKeysFromAToZ(keyCode) {
+        return keyCode >= 65 && keyCode <= 90;
+      }
+
+      function isSpace(keyCode) {
+        return keyCode == 32;
+      }
+
+      function gotoNextLine() {
+        clearCursor();
+        cursorYPosition += 60;
+        cursorXPosition = 10;
+        editorText += "\n";
+        // scrollToBottom();
+        scrollToTop();
+        drawCursor();
+      }
+      function type(code) {
+        clearCursor();
+        context.fillStyle = "rgb(235, 77, 75)";
+        context.fillText(code, cursorXPosition, cursorYPosition);
+        cursorXPosition += context.measureText(code).width;
+        editorText += code;
+        scrollToRight();
+        drawCursor();
+      }
+
+      function drawCursor() {
+        context.fillStyle = "rgb(235, 77, 75)";
+        context.fillRect(2 + cursorXPosition, cursorYPosition - 50, 18, 60);
+      }
+
+      function clearCursor() {
+        context.fillStyle = "rgb(47, 54, 64)";
+        context.fillRect(2 + cursorXPosition - 2, cursorYPosition - 50, 22, 60);
+      }
+
+      function clearReact(x, y) {
+        context.fillStyle = "rgb(47, 54, 64)";
+        context.font = "50px Arial";
+        context.fillRect(x, y, textEditorWidth, textEditorHeight);
+      }
+
+      function clearReactHalf(x, y, distanceX = 0, distanceY = 0) {
+        context.fillStyle = "rgb(47, 54, 64)";
+        context.font = "50px Arial";
+        context.fillRect(
+          x,
+          y,
+          textEditorWidth + distanceX,
+          textEditorHeight + distanceY,
+        );
+      }
+      function clearLastCharacter() {
+        clearCursor();
+        // check if cursor y is greater then starting Y and cursor x is zero then minus the height and place the cursor at the end of the line
+        if (cursorXPosition <= 10 && cursorYPosition > 50) {
+          // Lift the cursor one step up
+          cursorYPosition -= 60;
+          // Remove the last character from the string
+          editorText = editorText.substring(0, editorText.length - 1);
+          const editorTextToken = editorText.split("\n");
+          const lastEditorTokenText =
+            editorTextToken[editorTextToken.length - 1];
+          const totalCharactersWidth =
+            context.measureText(lastEditorTokenText).width;
+          cursorXPosition = 10 + totalCharactersWidth;
+          scrollToBottom();
+          drawCursor();
+          return;
+        }
+        context.fillStyle = "rgb(47, 54, 64)";
+        const characterMatrix = context.measureText(
+          editorText.charAt(editorText.length - 1),
+        );
+        const lastCharacterWidth = characterMatrix.width;
+        const lastCharacterHeight =
+          characterMatrix.fontBoundingBoxAscent +
+          characterMatrix.fontBoundingBoxDescent;
+        context.fillRect(
+          cursorXPosition - lastCharacterWidth,
+          cursorYPosition - lastCharacterHeight,
+          lastCharacterWidth,
+          lastCharacterHeight + 15,
+        );
+        cursorXPosition -= lastCharacterWidth;
+        editorText = editorText.substring(0, editorText.length - 1);
+        scrollToLeft();
+        drawCursor();
+      }
+    </script>
+  </body>
+</html>
