@@ -1,0 +1,14 @@
+{
+  "name": "image-shrink-2",
+  "version": "1.0.0",
+  "description": "Package to shrink image",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^40.6.0"
+  }
+}
